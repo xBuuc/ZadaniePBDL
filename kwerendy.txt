@@ -1,0 +1,104 @@
+CREATE TABLE Stores (
+  Id INT PRIMARY KEY,
+  City VARCHAR(255),
+  Street VARCHAR(255),
+  StreetNumber INT,
+  PhoneNumber VARCHAR(20)
+);
+
+CREATE TABLE Products (
+  Id INT PRIMARY KEY,
+  Name VARCHAR(255),
+  Price DECIMAL(10, 2)
+);
+
+CREATE TABLE Transaction (
+  Id INT PRIMARY KEY,
+  Date DATE,
+  StoreId INT,
+  FOREIGN KEY (StoreId) REFERENCES Stores(Id)
+);
+
+CREATE TABLE TransactionProducts (
+  TransactionId INT,
+  ProductId INT,
+  FOREIGN KEY (TransactionId) REFERENCES Transaction(Id),
+  FOREIGN KEY (ProductId) REFERENCES Products(Id)
+);
+
+-------------------------------------------------------------------------------------------------------
+
+SET @transactionId = 1;
+SET @transactionId2 = 2;
+SET @transactionId3 = 3;
+SET @productId1 = 1;
+SET @productId2 = 2;
+SET @productId3 = 3;
+SET @productId4 = 4;
+SET @productId5 = 5;
+
+INSERT INTO TransactionProducts (TransactionId, ProductId)
+VALUES
+  (@transactionId, @productId1),
+  (@transactionId, @productId1),
+  (@transactionId, @productId3),
+  (@transactionId2, @productId1),
+  (@transactionId2, @productId2),
+  (@transactionId2, @productId3),
+  (@transactionId2, @productId5),
+  (@transactionId3, @productId1),
+  (@transactionId3, @productId3),
+  (@transactionId3, @productId3);
+
+----------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW transaction_view AS
+SELECT t.Id , SUM(p.Price)
+FROM transaction t
+JOIN transactionproducts tp ON t.Id = tp.TransactionId
+JOIN products p ON tp.ProductId = p.Id
+GROUP BY t.Id;
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+CREATE VIEW StoreTransactionRevenue AS
+SELECT s.Id AS StoreId, COUNT(t.Id) AS NumberOfTransactions, SUM(p.Price) AS Revenue
+FROM Stores s
+LEFT JOIN transaction t ON s.Id = t.StoreId
+LEFT JOIN transactionproducts tp ON t.Id = tp.TransactionId
+LEFT JOIN products p ON tp.ProductId = p.Id
+GROUP BY s.Id;
+
+-------------------------------------------------------------------------------------------------------------------------
+
+DELIMITER //
+
+CREATE PROCEDURE StoreRevenueInCity(IN xcity VARCHAR(255))
+BEGIN
+  SELECT s.Id, SUM(p.Price) AS Revenue
+  FROM Stores s
+  LEFT JOIN Transaction t ON s.Id = t.StoreId
+  LEFT JOIN TransactionProducts tp ON t.Id = tp.TransactionId
+  LEFT JOIN Products p ON tp.ProductId = p.Id
+  WHERE s.City = xcity
+  GROUP BY s.Id;
+END //
+
+DELIMITER ;
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+DELIMITER //
+
+CREATE PROCEDURE ShopRevenueFromDate(IN fromDate DATE)
+BEGIN
+  SELECT SUM(p.Price) AS TotalRevenue
+  FROM Transaction t
+  JOIN TransactionProducts tp ON t.Id = tp.TransactionId
+  JOIN Products p ON tp.ProductId = p.Id
+  WHERE t.Date >= fromDate;
+END //
+
+DELIMITER ;
+
+ 
